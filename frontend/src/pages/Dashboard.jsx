@@ -356,7 +356,7 @@ export default function Dashboard() {
           </div>
 
           {/* Workforce Report Center */}
-          <div className="p-8 rounded-3xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl transition-all duration-300">
+          <div className="p-8 rounded-3xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl transition-all duration-300 printable-report-card-parent">
             
             {/* Report Header Select Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-150 dark:border-slate-800 pb-5 mb-6 no-print">

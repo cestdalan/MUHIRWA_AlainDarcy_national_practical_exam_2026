@@ -165,33 +165,50 @@
 
 /* Print CSS to isolate employee report card */
 @media print {
-  .no-print, .w-64, button, select, header, footer {
+  /* Hide the sidebar, navigation, scrollbars, and all other non-printable widgets */
+  .no-print, aside, .w-64, button, select, header, footer {
     display: none !important;
   }
-  body, html, #root, main {
+  
+  /* Reset the main app content wrappers' spacing and grid display styles to normal flow */
+  html, body, #root, .min-h-screen, main, .flex, .space-y-8 {
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
     background-color: white !important;
     color: black !important;
+    display: block !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
   }
+
+  /* Reset main column margin */
   main {
     margin-left: 0 !important;
   }
-  body * {
-    visibility: hidden;
+
+  /* Reset the parent container card layout rules so it is transparent and has no margins */
+  .printable-report-card-parent {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
-  #printable-employee-report, #printable-employee-report * {
-    visibility: visible;
-  }
+
+  /* Ensure the printable report container is visible and styled properly */
   #printable-employee-report {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    display: block !important;
+    width: 100% !important;
     background: white !important;
+    background-color: white !important;
     color: black !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    margin: 0 !important;
   }
 }
