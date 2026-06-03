@@ -37,18 +37,7 @@ const STATUS_STYLES = {
   }
 };
 
-// Generates a dynamic gradient for the avatar using name initials
-const getAvatarGradient = (firstName, lastName) => {
-  const code = ((firstName || 'A').charCodeAt(0) + (lastName || 'B').charCodeAt(0)) % 5;
-  const gradients = [
-    'from-blue-550 to-indigo-600 dark:from-blue-500 dark:to-indigo-500',
-    'from-emerald-500 to-teal-600 dark:from-emerald-450 dark:to-teal-500',
-    'from-purple-600 to-pink-600 dark:from-purple-500 dark:to-pink-500',
-    'from-rose-500 to-orange-500 dark:from-rose-450 dark:to-orange-500',
-    'from-cyan-500 to-blue-600 dark:from-cyan-450 dark:to-blue-500'
-  ];
-  return gradients[code];
-};
+
 
 export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick, onUnlinkClick, onReport }) {
   const { user } = useAuth();
@@ -86,7 +75,6 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick
           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/40 bg-white dark:bg-slate-900 transition-colors duration-300">
             {employees.map((emp, index) => {
               const statusInfo = STATUS_STYLES[emp.empstatus] || STATUS_STYLES['On Mission'];
-              const gradClass = getAvatarGradient(emp.empfname, emp.emplname);
 
               return (
                 <tr 
@@ -96,7 +84,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick
                   {/* Name & Email column */}
                   <td className="px-6 py-4.5 whitespace-nowrap">
                     <div className="flex items-center gap-3.5">
-                      <div className={`h-11 w-11 rounded-2xl bg-gradient-to-br ${gradClass} flex items-center justify-center font-black text-white text-sm shadow-md transition-transform duration-300 group-hover:scale-105 select-none shrink-0`}>
+                      <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[#1e3a8a] to-blue-650 dark:from-brand-600 dark:to-blue-550 flex items-center justify-center font-black text-white text-sm shadow-md transition-transform duration-300 group-hover:scale-105 select-none shrink-0">
                         {emp.empfname ? emp.empfname[0].toUpperCase() : ''}{emp.emplname ? emp.emplname[0].toUpperCase() : ''}
                       </div>
                       <div>

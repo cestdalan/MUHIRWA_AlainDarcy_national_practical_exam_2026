@@ -38,7 +38,7 @@ const LayoutShell = ({ children }) => {
       
       {/* Scrollable Main Content Area */}
       <main className="flex-1 min-h-screen ml-64 p-8 overflow-y-auto text-gray-900 dark:text-slate-100 bg-[#f5f5f5] dark:bg-slate-950 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[95rem] mx-auto px-2 lg:px-4">
           {children}
         </div>
       </main>
