@@ -48,7 +48,7 @@ export default function Sidebar() {
   const isAdmin = user?.role === 'Admin';
 
   return (
-    <div className="w-64 h-screen fixed left-0 top-0 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col justify-between text-gray-900 dark:text-slate-300 z-30 transition-colors duration-300">
+    <div className="w-64 h-screen fixed left-0 top-0 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col justify-between text-gray-900 dark:text-slate-300 z-30 transition-colors duration-300 no-print">
       <div>
         {/* Brand Header */}
         <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center gap-3">

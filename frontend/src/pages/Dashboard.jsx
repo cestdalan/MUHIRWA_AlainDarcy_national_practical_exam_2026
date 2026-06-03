@@ -412,7 +412,9 @@ export default function Dashboard() {
                     <Printer className="h-4 w-4" />
                     <span>Print Formal Report</span>
                   </button>
-                          {/* Printable Report Wrapper */}
+                </div>
+                
+                {/* Printable Report Wrapper */}
                 <div 
                   id="printable-employee-report" 
                   className="p-8 rounded-2xl border border-gray-150 dark:border-slate-800 bg-gray-50 dark:bg-slate-950/40 text-black dark:text-slate-100"
@@ -658,7 +660,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                </div>             </div>
+                 </div>
 
               </div>
             ) : (

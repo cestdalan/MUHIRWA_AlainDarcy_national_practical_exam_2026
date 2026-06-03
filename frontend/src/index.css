@@ -165,13 +165,13 @@
 
 /* Print CSS to isolate employee report card */
 @media print {
-  /* Hide the sidebar, navigation, scrollbars, and all other non-printable widgets */
-  .no-print, aside, .w-64, button, select, header, footer {
+  /* Hide all non-printable widgets */
+  .no-print, aside, button, select, header, footer {
     display: none !important;
   }
   
   /* Reset the main app content wrappers' spacing and grid display styles to normal flow */
-  html, body, #root, .min-h-screen, main, .flex, .space-y-8 {
+  html, body, #root, .min-h-screen, main {
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
@@ -205,10 +205,34 @@
     width: 100% !important;
     background: white !important;
     background-color: white !important;
-    color: black !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+
+  /* Ensure all text inside the report is black and backgrounds are transparent for high-quality printing */
+  #printable-employee-report * {
+    color: black !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Retain light borders for tables and dividers */
+  #printable-employee-report,
+  #printable-employee-report div,
+  #printable-employee-report table,
+  #printable-employee-report tr,
+  #printable-employee-report th,
+  #printable-employee-report td {
+    border-color: #e5e7eb !important;
+  }
+
+  /* Make sure the status badge borders are visible in print */
+  #printable-employee-report .border {
+    border-width: 1px !important;
+    border-style: solid !important;
   }
 }
