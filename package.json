@@ -1,0 +1,18 @@
+{
+  "name": "hrms-workspace",
+  "version": "1.0.0",
+  "description": "Root workspace for DAB Enterprise LTD HRMS",
+  "private": true,
+  "scripts": {
+    "install-backend": "npm install --prefix backend",
+    "install-frontend": "npm install --prefix frontend",
+    "install-all": "npm run install-backend && npm run install-frontend",
+    "init-db": "npm run init-db --prefix backend",
+    "server": "npm run dev --prefix backend",
+    "client": "npm run dev --prefix frontend",
+    "dev": "npx.cmd concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
