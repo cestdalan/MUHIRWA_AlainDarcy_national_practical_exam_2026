@@ -143,7 +143,7 @@ export default function Dashboard() {
     <div className="space-y-8 animate-fade-in text-black dark:text-slate-100">
       
       {/* Welcome Banner Header */}
-      <div className="p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors duration-300 shadow-sm">
+      <div className="p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors duration-300 shadow-sm no-print">
         <div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white">
             Welcome Back, {welcomeName}!
@@ -174,7 +174,7 @@ export default function Dashboard() {
 
       {/* Main Aggregated Metrics Grid - ADMIN ONLY */}
       {isAdmin && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 no-print">
           <StatusCard status="On Mission" count={statusReport['On Mission']} />
           <StatusCard status="On Leave" count={statusReport['On Leave']} />
           <StatusCard status="Left" count={statusReport['Left']} />
@@ -314,7 +314,7 @@ export default function Dashboard() {
         // ==========================================
         <div className="space-y-8 no-print-section">
           {/* Admin Analytics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
             {/* Total Workforce */}
             <div className="p-6 rounded-2xl border border-[#f5f5f5] dark:border-slate-800/80 glass-card flex items-center justify-between bg-gradient-to-br from-[#1e3a8a]/5 to-[#f5f5f5] dark:from-brand-600/5 dark:to-slate-900/10 transition-colors duration-300 shadow-sm">
               <div>
@@ -359,7 +359,7 @@ export default function Dashboard() {
           <div className="p-8 rounded-3xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl transition-all duration-300">
             
             {/* Report Header Select Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-150 dark:border-slate-800 pb-5 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-150 dark:border-slate-800 pb-5 mb-6 no-print">
               <div>
                 <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                   <FileText className="h-5.5 w-5.5 text-[#1e3a8a] dark:text-brand-400" />
