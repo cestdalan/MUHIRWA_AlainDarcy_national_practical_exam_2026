@@ -547,6 +547,179 @@ app.post('/api/employees/:id/unlink', authMiddleware, async (req, res) => {
   }
 });
 
+// ==========================================
+// 5. ACCOUNT LINK REQUEST ENDPOINTS
+// ==========================================
+
+// Initialize link_requests table if it does not exist
+const initLinkRequestsTable = async () => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS link_requests (
+        request_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        emp_id INT NOT NULL,
+        status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_pending (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('Database link_requests table checked/created.');
+  } catch (err) {
+    console.error('Error creating link_requests table:', err);
+  }
+};
+initLinkRequestsTable();
+
+// Get all employees who are not linked to any user record
+app.get('/api/employees/unlinked', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT e.emp_id, e.empfname, e.emplname, d.d_name, p.posname
+      FROM employee e
+      LEFT JOIN department d ON e.d_id = d.d_id
+      LEFT JOIN \`position\` p ON e.pos_id = p.pos_id
+      WHERE e.emp_id NOT IN (SELECT emp_id FROM users WHERE emp_id IS NOT NULL)
+      ORDER BY e.empfname ASC, e.emplname ASC
+    `);
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Fetch unlinked employees error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve unlinked employees.' });
+  }
+});
+
+// Get currently logged-in user's pending link request
+app.get('/api/link-requests/my-pending', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT lr.request_id, lr.status, lr.emp_id, e.empfname, e.emplname, d.d_name, p.posname
+      FROM link_requests lr
+      JOIN employee e ON lr.emp_id = e.emp_id
+      LEFT JOIN department d ON e.d_id = d.d_id
+      LEFT JOIN \`position\` p ON e.pos_id = p.pos_id
+      WHERE lr.user_id = ? AND lr.status = 'Pending'
+    `, [req.session.user.id]);
+    
+    if (rows.length > 0) {
+      return res.status(200).json(rows[0]);
+    }
+    return res.status(200).json(null);
+  } catch (error) {
+    console.error('Fetch my pending request error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve pending request.' });
+  }
+});
+
+// Create a new link request
+app.post('/api/link-requests', authMiddleware, async (req, res) => {
+  const { empId } = req.body;
+  if (!empId) {
+    return res.status(400).json({ error: 'Employee ID is required.' });
+  }
+  
+  try {
+    // Check if user is already linked
+    const [userRows] = await db.query('SELECT emp_id FROM users WHERE user_id = ?', [req.session.user.id]);
+    if (userRows.length > 0 && userRows[0].emp_id !== null) {
+      return res.status(400).json({ error: 'Your account is already linked to an employee.' });
+    }
+    
+    // Check if employee is already linked to someone else
+    const [linkedEmp] = await db.query('SELECT user_id FROM users WHERE emp_id = ?', [empId]);
+    if (linkedEmp.length > 0) {
+      return res.status(400).json({ error: 'This employee record is already linked to another account.' });
+    }
+    
+    // Insert or update pending request
+    await db.query(`
+      INSERT INTO link_requests (user_id, emp_id, status)
+      VALUES (?, ?, 'Pending')
+      ON DUPLICATE KEY UPDATE emp_id = VALUES(emp_id), status = 'Pending'
+    `, [req.session.user.id, empId]);
+    
+    return res.status(201).json({ message: 'Link request submitted successfully.' });
+  } catch (error) {
+    console.error('Submit link request error:', error);
+    return res.status(500).json({ error: 'Failed to submit link request.' });
+  }
+});
+
+// Get all pending link requests (Admin only)
+app.get('/api/link-requests/all-pending', authMiddleware, async (req, res) => {
+  if (req.session.user.role !== 'Admin') {
+    return res.status(403).json({ error: 'Access denied. Admin role required.' });
+  }
+  
+  try {
+    const [rows] = await db.query(`
+      SELECT lr.request_id, lr.user_id, lr.emp_id, lr.status, lr.created_at,
+             u.username, e.empfname, e.emplname, d.d_name, p.posname
+      FROM link_requests lr
+      JOIN users u ON lr.user_id = u.user_id
+      JOIN employee e ON lr.emp_id = e.emp_id
+      LEFT JOIN department d ON e.d_id = d.d_id
+      LEFT JOIN \`position\` p ON e.pos_id = p.pos_id
+      WHERE lr.status = 'Pending'
+      ORDER BY lr.created_at DESC
+    `);
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error('Fetch all pending requests error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve pending requests.' });
+  }
+});
+
+// Approve a link request (Admin only)
+app.post('/api/link-requests/:id/approve', authMiddleware, async (req, res) => {
+  if (req.session.user.role !== 'Admin') {
+    return res.status(403).json({ error: 'Access denied. Admin role required.' });
+  }
+  
+  const requestId = req.params.id;
+  
+  try {
+    // Get request details
+    const [reqRows] = await db.query('SELECT user_id, emp_id FROM link_requests WHERE request_id = ? AND status = \'Pending\'', [requestId]);
+    if (reqRows.length === 0) {
+      return res.status(404).json({ error: 'Pending link request not found.' });
+    }
+    
+    const { user_id, emp_id } = reqRows[0];
+    
+    // Update user account link
+    await db.query('UPDATE users SET emp_id = ? WHERE user_id = ?', [emp_id, user_id]);
+    
+    // Mark request as Approved
+    await db.query('UPDATE link_requests SET status = \'Approved\' WHERE request_id = ?', [requestId]);
+    
+    return res.status(200).json({ message: 'Link request approved and account linked successfully.' });
+  } catch (error) {
+    console.error('Approve link request error:', error);
+    return res.status(500).json({ error: 'Failed to approve link request.' });
+  }
+});
+
+// Reject a link request (Admin only)
+app.post('/api/link-requests/:id/reject', authMiddleware, async (req, res) => {
+  if (req.session.user.role !== 'Admin') {
+    return res.status(403).json({ error: 'Access denied. Admin role required.' });
+  }
+  
+  const requestId = req.params.id;
+  
+  try {
+    // Delete the request so the user can submit a new one
+    await db.query('DELETE FROM link_requests WHERE request_id = ?', [requestId]);
+    return res.status(200).json({ message: 'Link request rejected.' });
+  } catch (error) {
+    console.error('Reject link request error:', error);
+    return res.status(500).json({ error: 'Failed to reject link request.' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

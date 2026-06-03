@@ -30,7 +30,7 @@ const STATUS_BADGES = {
 };
 
 export default function Dashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, checkSession } = useAuth();
   const isAdmin = currentUser?.role === 'Admin';
 
   const [statusReport, setStatusReport] = useState({
@@ -43,6 +43,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [totalEmployees, setTotalEmployees] = useState(0);
 
+  // Self-Service Link Request States
+  const [pendingRequest, setPendingRequest] = useState(null);
+  const [unlinkedEmployees, setUnlinkedEmployees] = useState([]);
+  const [fetchingUnlinked, setFetchingUnlinked] = useState(false);
+  const [requestingEmpId, setRequestingEmpId] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [actingRequestId, setActingRequestId] = useState(null);
+
   // Report Generator States
   const [employees, setEmployees] = useState([]);
   const [selectedEmpId, setSelectedEmpId] = useState('');
@@ -50,23 +60,128 @@ export default function Dashboard() {
   const [fetchingReport, setFetchingReport] = useState(false);
   const [reportError, setReportError] = useState('');
 
+  const fetchPendingRequests = async () => {
+    try {
+      const res = await fetch('/api/link-requests/all-pending');
+      if (res.ok) {
+        const data = await res.json();
+        setPendingRequests(data);
+      }
+    } catch (err) {
+      console.error('Failed to load pending requests:', err);
+    }
+  };
+
+  const fetchPendingAndUnlinked = async () => {
+    try {
+      setFetchingUnlinked(true);
+      setErrorMsg('');
+      const reqRes = await fetch('/api/link-requests/my-pending');
+      if (reqRes.ok) {
+        const reqData = await reqRes.json();
+        setPendingRequest(reqData);
+        
+        if (!reqData) {
+          const empRes = await fetch('/api/employees/unlinked');
+          if (empRes.ok) {
+            const empData = await empRes.json();
+            setUnlinkedEmployees(empData);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching link request data:', err);
+    } finally {
+      setFetchingUnlinked(false);
+    }
+  };
+
+  const handleRequestLink = async (empId) => {
+    setRequestingEmpId(empId);
+    setErrorMsg('');
+    try {
+      const response = await fetch('/api/link-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empId })
+      });
+      if (response.ok) {
+        await fetchPendingAndUnlinked();
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to submit link request.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message);
+    } finally {
+      setRequestingEmpId(null);
+    }
+  };
+
+  const handleApproveRequest = async (requestId) => {
+    setActingRequestId(requestId);
+    try {
+      const res = await fetch(`/api/link-requests/${requestId}/approve`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await Promise.all([
+          fetchPendingRequests(),
+          fetchStatusReport()
+        ]);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to approve request.');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    setActingRequestId(requestId);
+    try {
+      const res = await fetch(`/api/link-requests/${requestId}/reject`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchPendingRequests();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to reject request.');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
   const fetchStatusReport = async () => {
     try {
       setLoading(true);
-      const [statusRes, empRes] = await Promise.all([
-        fetch('/api/reports/status'),
-        fetch('/api/employees')
-      ]);
+      if (isAdmin) {
+        const [statusRes, empRes] = await Promise.all([
+          fetch('/api/reports/status'),
+          fetch('/api/employees'),
+          fetchPendingRequests()
+        ]);
 
-      if (statusRes.ok) {
-        const statusData = await statusRes.json();
-        setStatusReport(statusData);
-      }
-      
-      if (empRes.ok) {
-        const empData = await empRes.json();
-        setTotalEmployees(empData.length);
-        setEmployees(empData);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          setStatusReport(statusData);
+        }
+        
+        if (empRes.ok) {
+          const empData = await empRes.json();
+          setTotalEmployees(empData.length);
+          setEmployees(empData);
+        }
+      } else if (!currentUser?.emp_id) {
+        await fetchPendingAndUnlinked();
       }
     } catch (err) {
       console.error('Failed to load dashboard report statistics:', err);
@@ -121,7 +236,48 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStatusReport();
-  }, []);
+
+    let intervalId;
+    if (currentUser) {
+      if (currentUser.role === 'Admin') {
+        // Poll for new requests on Admin side
+        intervalId = setInterval(() => {
+          fetchPendingRequests();
+        }, 4000);
+      } else if (currentUser.role === 'Staff' && !currentUser.emp_id) {
+        // Poll for status on unlinked Staff side
+        intervalId = setInterval(async () => {
+          const res = await fetch('/api/me');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.user && data.user.emp_id) {
+              // User has been approved and linked!
+              await checkSession();
+            } else {
+              // Otherwise, update request status in case they got rejected/cancelled
+              const reqRes = await fetch('/api/link-requests/my-pending');
+              if (reqRes.ok) {
+                const reqData = await reqRes.json();
+                setPendingRequest(reqData);
+                if (!reqData) {
+                  // If request was deleted or rejected, fetch unlinked list
+                  const empRes = await fetch('/api/employees/unlinked');
+                  if (empRes.ok) {
+                    const empData = await empRes.json();
+                    setUnlinkedEmployees(empData);
+                  }
+                }
+              }
+            }
+          }
+        }, 3000);
+      }
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [currentUser?.emp_id, currentUser?.user_id]);
 
   if (loading) {
     return (
@@ -185,17 +341,81 @@ export default function Dashboard() {
 
       {/* Conditional Layout: Admin Stats vs Staff Profile */}
       {!isAdmin ? (
-        // ==========================================
-        // STAFF PERSONAL PROFILE VIEW - SINGLE BIG CARD
-        // ==========================================
-        <div className="w-full p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-8 animate-slide-up shadow-xl transition-colors duration-300">
-          
-          {/* Warn unlinked staff */}
-          {!currentUser?.emp_id && (
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-amber-850 dark:text-amber-400 text-xs font-semibold animate-pulse">
-              ⚠️ Your account is not yet linked to an employee profile. Please ask the administrator to link your profile to your employee record.
+        !currentUser?.emp_id ? (
+          pendingRequest ? (
+            // ==========================================
+            // WAITING FOR APPROVAL LOADER VIEW
+            // ==========================================
+            <div className="w-full p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl space-y-6 text-center animate-pulse py-16">
+              <div className="flex justify-center">
+                <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
+              </div>
+              <div className="space-y-2 max-w-md mx-auto">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Waiting for Admin Approval</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-450 leading-relaxed">
+                  Your request to link with <strong className="text-[#1e3a8a] dark:text-brand-400">{pendingRequest.empfname} {pendingRequest.emplname}</strong> (DAB-EMP-00{pendingRequest.emp_id}) is currently pending review by the administrator.
+                </p>
+              </div>
+              <div className="pt-4 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-400 uppercase tracking-widest font-extrabold max-w-sm mx-auto">
+                HRMS System Link Pending • Updates dynamically
+              </div>
             </div>
-          )}
+          ) : (
+            // ==========================================
+            // SELECT UNLINKED EMPLOYEE VIEW
+            // ==========================================
+            <div className="w-full p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl space-y-6 max-w-3xl mx-auto">
+              <div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Link Your HRMS Account</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-450 mt-1">
+                  Your user account is not linked to any employee record. Please find your name in the list below and click the button to request a link.
+                </p>
+              </div>
+
+              {errorMsg && (
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-750 dark:text-rose-400 text-xs font-bold">
+                  {errorMsg}
+                </div>
+              )}
+
+              {fetchingUnlinked ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <div className="w-8 h-8 border-3 border-[#1e3a8a]/20 border-t-[#1e3a8a] rounded-full animate-spin"></div>
+                  <p className="text-xs text-gray-500 dark:text-slate-450">Loading unlinked employee records...</p>
+                </div>
+              ) : unlinkedEmployees.length === 0 ? (
+                <div className="p-8 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-550 font-semibold leading-relaxed">
+                  No unlinked employee records found in the database. <br />
+                  Please ask your HR Administrator to create your employee profile.
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-slate-800 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-950/40">
+                  {unlinkedEmployees.map((emp) => (
+                    <div key={emp.emp_id} className="flex items-center justify-between p-4.5 hover:bg-white dark:hover:bg-slate-900 transition-colors duration-200">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">{emp.empfname} {emp.emplname}</h4>
+                        <p className="text-[10px] text-[#1e3a8a] dark:text-brand-400 font-bold uppercase tracking-wider mt-0.5">
+                          {emp.posname || 'No Position'} • {emp.d_name || 'No Department'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRequestLink(emp.emp_id)}
+                        disabled={requestingEmpId === emp.emp_id}
+                        className="px-4 py-2 rounded-xl bg-[#1e3a8a] dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white font-bold text-xs shadow-sm transition-all duration-200 disabled:opacity-50"
+                      >
+                        {requestingEmpId === emp.emp_id ? 'Requesting...' : 'Request Link'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        ) : (
+          // ==========================================
+          // STAFF PERSONAL PROFILE VIEW - SINGLE BIG CARD
+          // ==========================================
+          <div className="w-full p-8 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-8 animate-slide-up shadow-xl transition-colors duration-300">
 
           {/* Card Top Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-200 dark:border-slate-800 pb-6">
@@ -301,18 +521,64 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
           {/* Kigali HQ notice at bottom */}
-          <div className="pt-5 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-slate-500">
+          <div className="pt-5 border-t border-gray-200 dark:border-slate-800 flex items-center justify-between text-xs text-gray-550 dark:text-slate-500">
             <span>DAB Enterprise LTD Kigali Headquarters • Administrative Profile Database</span>
             <span className="font-bold text-[#1e3a8a] dark:text-brand-400 uppercase tracking-wider">Verified Employee Account</span>
           </div>
         </div>
+        )
       ) : (
         // ==========================================
         // ADMIN ANALYTICS & REPORTS SECTION
         // ==========================================
         <div className="space-y-8 no-print-section">
+          {/* Pending Link Requests Notifications - Admin Only */}
+          {pendingRequests.length > 0 && (
+            <div className="p-6 rounded-3xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4 shadow-sm animate-slide-up no-print">
+              <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3">
+                <h3 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1e3a8a] dark:bg-brand-500 animate-pulse"></span>
+                  Pending Link Account Requests ({pendingRequests.length})
+                </h3>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-extrabold">Requires Action</p>
+              </div>
+              <div className="space-y-3">
+                {pendingRequests.map((req) => (
+                  <div key={req.request_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-slate-950/40 border border-gray-150 dark:border-slate-800 rounded-2xl gap-4">
+                    <div>
+                      <p className="text-xs text-gray-700 dark:text-slate-350">
+                        User <strong className="text-gray-900 dark:text-white font-bold">@{req.username}</strong> requested to link their account to employee:
+                      </p>
+                      <h4 className="font-extrabold text-sm text-[#1e3a8a] dark:text-brand-400 mt-1">
+                        {req.empfname} {req.emplname} (DAB-EMP-00{req.emp_id})
+                      </h4>
+                      <p className="text-[10px] text-gray-500 dark:text-slate-500 mt-0.5">
+                        Position: {req.posname || 'N/A'} • Department: {req.d_name || 'N/A'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+                      <button
+                        disabled={actingRequestId === req.request_id}
+                        onClick={() => handleRejectRequest(req.request_id)}
+                        className="px-3.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-gray-700 dark:text-slate-450 font-bold text-xs hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        disabled={actingRequestId === req.request_id}
+                        onClick={() => handleApproveRequest(req.request_id)}
+                        className="px-3.5 py-1.5 rounded-lg bg-[#1e3a8a] dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-500 text-white font-bold text-xs shadow-sm transition-colors disabled:opacity-50"
+                      >
+                        {actingRequestId === req.request_id ? 'Approving...' : 'Approve & Link'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Admin Analytics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
             {/* Total Workforce */}
