@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -58,39 +59,41 @@ export default function App() {
 
 
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public login route */}
-          <Route path="/login" element={<Login />} />
+    <NotificationProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Public login route */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Protected routes */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <LayoutShell>
-                  <Dashboard />
-                </LayoutShell>
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/employees" 
-            element={
-              <ProtectedRoute>
-                <LayoutShell>
-                  <Employees />
-                </LayoutShell>
-              </ProtectedRoute>
-            } 
-          />
+            {/* Protected routes */}
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <LayoutShell>
+                    <Dashboard />
+                  </LayoutShell>
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/employees" 
+              element={
+                <ProtectedRoute>
+                  <LayoutShell>
+                    <Employees />
+                  </LayoutShell>
+                </ProtectedRoute>
+              } 
+            />
 
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import StatusCard from '../components/StatusCard';
 import { 
   Users, 
@@ -31,6 +32,7 @@ const STATUS_BADGES = {
 
 export default function Dashboard() {
   const { user: currentUser, checkSession, refreshUser } = useAuth();
+  const { showNotification } = useNotification();
   const isAdmin = currentUser?.role === 'Admin';
 
   const [statusReport, setStatusReport] = useState({
@@ -106,6 +108,7 @@ export default function Dashboard() {
         body: JSON.stringify({ empId })
       });
       if (response.ok) {
+        showNotification('Link request submitted successfully!', 'success');
         await fetchPendingAndUnlinked();
       } else {
         const data = await response.json();
@@ -114,6 +117,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message);
+      showNotification(err.message, 'error');
     } finally {
       setRequestingEmpId(null);
     }
@@ -126,16 +130,18 @@ export default function Dashboard() {
         method: 'POST'
       });
       if (res.ok) {
+        showNotification('Link request approved successfully!', 'success');
         await Promise.all([
           fetchPendingRequests(),
           fetchStatusReport()
         ]);
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to approve request.');
+        showNotification(data.error || 'Failed to approve request.', 'error');
       }
     } catch (err) {
       console.error(err);
+      showNotification('Error approving link request.', 'error');
     } finally {
       setActingRequestId(null);
     }
@@ -148,13 +154,15 @@ export default function Dashboard() {
         method: 'POST'
       });
       if (res.ok) {
+        showNotification('Link request rejected and removed.', 'info');
         await fetchPendingRequests();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to reject request.');
+        showNotification(data.error || 'Failed to reject request.', 'error');
       }
     } catch (err) {
       console.error(err);
+      showNotification('Error rejecting link request.', 'error');
     } finally {
       setActingRequestId(null);
     }

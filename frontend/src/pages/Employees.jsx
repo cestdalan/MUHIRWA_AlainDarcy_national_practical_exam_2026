@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import EmployeeTable from '../components/EmployeeTable';
 import EmployeeModal from '../components/EmployeeModal';
 import LinkAccountModal from '../components/LinkAccountModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { Plus, Search, Filter, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function Employees() {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'Admin';
@@ -24,6 +27,15 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkingEmployee, setLinkingEmployee] = useState(null);
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    isDanger: false
+  });
 
   const fetchEmployees = async () => {
     try {
@@ -68,11 +80,7 @@ export default function Employees() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = async (empId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this employee record? This action cannot be undone.')) {
-      return;
-    }
-
+  const doDeleteEmployee = async (empId) => {
     try {
       setErrorMsg('');
       const response = await fetch(`/api/employees/${empId}`, {
@@ -80,7 +88,7 @@ export default function Employees() {
       });
 
       if (response.ok) {
-        // Refresh list
+        showNotification('Employee record deleted successfully!', 'success');
         fetchEmployees();
       } else {
         const errData = await response.json();
@@ -88,7 +96,18 @@ export default function Employees() {
       }
     } catch (err) {
       setErrorMsg(err.message);
+      showNotification(err.message, 'error');
     }
+  };
+
+  const handleDeleteClick = (empId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Employee',
+      message: 'Are you sure you want to permanently delete this employee record? This action cannot be undone.',
+      isDanger: true,
+      onConfirm: () => doDeleteEmployee(empId)
+    });
   };
 
   const handleSaveEmployee = async (formData) => {
@@ -97,21 +116,32 @@ export default function Employees() {
       ? `/api/employees/${selectedEmployee.emp_id}` 
       : '/api/employees';
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(formData)
-    });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
 
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error || 'Error processing the request.');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Error processing the request.');
+      }
+
+      showNotification(
+        selectedEmployee 
+          ? 'Employee details updated successfully!' 
+          : 'New employee record created successfully!', 
+        'success'
+      );
+      // Refresh list
+      fetchEmployees();
+    } catch (err) {
+      showNotification(err.message, 'error');
+      throw err;
     }
-
-    // Refresh list
-    fetchEmployees();
   };
 
   const handleLinkClick = (employee) => {
@@ -119,11 +149,7 @@ export default function Employees() {
     setIsLinkModalOpen(true);
   };
 
-  const handleUnlinkClick = async (employee) => {
-    if (!window.confirm(`Are you sure you want to unlink the HRMS account of ${employee.empfname} ${employee.emplname}?`)) {
-      return;
-    }
-
+  const doUnlinkAccount = async (employee) => {
     try {
       setErrorMsg('');
       const response = await fetch(`/api/employees/${employee.emp_id}/unlink`, {
@@ -131,6 +157,7 @@ export default function Employees() {
       });
 
       if (response.ok) {
+        showNotification(`Unlinked HRMS account for ${employee.empfname} ${employee.emplname} successfully.`, 'info');
         fetchEmployees();
       } else {
         const errData = await response.json();
@@ -138,26 +165,45 @@ export default function Employees() {
       }
     } catch (err) {
       setErrorMsg(err.message);
+      showNotification(err.message, 'error');
     }
+  };
+
+  const handleUnlinkClick = (employee) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Unlink Account',
+      message: `Are you sure you want to unlink the HRMS account of ${employee.empfname} ${employee.emplname}?`,
+      isDanger: true,
+      onConfirm: () => doUnlinkAccount(employee)
+    });
   };
 
   const handleLinkAccount = async (userId) => {
     if (!linkingEmployee) return;
 
-    const response = await fetch(`/api/employees/${linkingEmployee.emp_id}/link`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId })
-    });
+    try {
+      const response = await fetch(`/api/employees/${linkingEmployee.emp_id}/link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId })
+      });
 
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error || 'Failed to link account.');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to link account.');
+      }
+
+      showNotification(
+        `Linked employee ${linkingEmployee.empfname} ${linkingEmployee.emplname} successfully.`, 
+        'success'
+      );
+      fetchEmployees();
+    } catch (err) {
+      showNotification(err.message, 'error');
     }
-
-    fetchEmployees();
   };
 
   // Filters logic
@@ -313,6 +359,16 @@ export default function Employees() {
         }}
         employee={linkingEmployee}
         onLink={handleLinkAccount}
+      />
+
+      {/* Reusable Action Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        isDanger={confirmModal.isDanger}
       />
     </div>
   );
