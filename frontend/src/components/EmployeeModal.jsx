@@ -12,13 +12,10 @@ export default function EmployeeModal({ isOpen, onClose, employee, onSave }) {
     empaddress: '',
     emphiredate: '',
     empstatus: 'On Mission',
-    d_id: '',
-    pos_id: ''
+    departmentName: '',
+    positionName: ''
   });
 
-  const [departments, setDepartments] = useState([]);
-  const [positions, setPositions] = useState([]);
-  const [loadingLookups, setLoadingLookups] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -35,8 +32,8 @@ export default function EmployeeModal({ isOpen, onClose, employee, onSave }) {
         empaddress: employee.empaddress || '',
         emphiredate: employee.emphiredate || '',
         empstatus: employee.empstatus || 'On Mission',
-        d_id: employee.d_id || '',
-        pos_id: employee.pos_id || ''
+        departmentName: employee.d_name || '',
+        positionName: employee.posname || ''
       });
     } else {
       setFormData({
@@ -49,42 +46,12 @@ export default function EmployeeModal({ isOpen, onClose, employee, onSave }) {
         empaddress: '',
         emphiredate: new Date().toISOString().split('T')[0], // pre-populate today
         empstatus: 'On Mission',
-        d_id: '',
-        pos_id: ''
+        departmentName: '',
+        positionName: ''
       });
     }
     setErrorMsg('');
   }, [employee, isOpen]);
-
-  // Load departments & positions on mount
-  useEffect(() => {
-    const fetchLookups = async () => {
-      try {
-        setLoadingLookups(true);
-        const [deptRes, posRes] = await Promise.all([
-          fetch('/api/departments'),
-          fetch('/api/positions')
-        ]);
-        
-        if (deptRes.ok && posRes.ok) {
-          const depts = await deptRes.json();
-          const poss = await posRes.json();
-          setDepartments(depts);
-          setPositions(poss);
-        } else {
-          console.error('Failed to load lookup tables.');
-        }
-      } catch (err) {
-        console.error('Error fetching lookups:', err);
-      } finally {
-        setLoadingLookups(false);
-      }
-    };
-
-    if (isOpen) {
-      fetchLookups();
-    }
-  }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -260,39 +227,33 @@ export default function EmployeeModal({ isOpen, onClose, employee, onSave }) {
             />
           </div>
 
-          {/* Department & Position (Dynamic Options) */}
+          {/* Department & Position (Manual Free-Text Inputs) */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#1e3a8a] dark:text-slate-400 mb-2">
                 Department
               </label>
-              <select
-                name="d_id"
-                value={formData.d_id}
+              <input
+                type="text"
+                name="departmentName"
+                value={formData.departmentName}
                 onChange={handleChange}
-                className="w-full bg-[#f5f5f5] dark:bg-slate-950 border border-[#f5f5f5] dark:border-slate-800 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] rounded-xl px-4 py-2.5 text-sm text-black dark:text-white outline-none transition-all duration-300"
-              >
-                <option value="">Select Department</option>
-                {departments.map(dept => (
-                  <option key={dept.d_id} value={dept.d_id}>{dept.d_name}</option>
-                ))}
-              </select>
+                placeholder="e.g. IT Department"
+                className="w-full bg-[#f5f5f5] dark:bg-slate-950 border border-[#f5f5f5] dark:border-slate-800 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] rounded-xl px-4 py-2.5 text-sm text-black dark:text-white placeholder-black/35 dark:placeholder-slate-650 outline-none transition-all duration-300 shadow-sm"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#1e3a8a] dark:text-slate-400 mb-2">
                 Position
               </label>
-              <select
-                name="pos_id"
-                value={formData.pos_id}
+              <input
+                type="text"
+                name="positionName"
+                value={formData.positionName}
                 onChange={handleChange}
-                className="w-full bg-[#f5f5f5] dark:bg-slate-950 border border-[#f5f5f5] dark:border-slate-800 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] rounded-xl px-4 py-2.5 text-sm text-black dark:text-white outline-none transition-all duration-300"
-              >
-                <option value="">Select Position</option>
-                {positions.map(pos => (
-                  <option key={pos.pos_id} value={pos.pos_id}>{pos.posname}</option>
-                ))}
-              </select>
+                placeholder="e.g. Software Engineer"
+                className="w-full bg-[#f5f5f5] dark:bg-slate-950 border border-[#f5f5f5] dark:border-slate-800 focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] rounded-xl px-4 py-2.5 text-sm text-black dark:text-white placeholder-black/35 dark:placeholder-slate-650 outline-none transition-all duration-300 shadow-sm"
+              />
             </div>
           </div>
 

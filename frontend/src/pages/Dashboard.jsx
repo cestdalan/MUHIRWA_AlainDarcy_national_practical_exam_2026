@@ -82,6 +82,23 @@ export default function Dashboard() {
       return;
     }
 
+    if (empId === 'all') {
+      const summaryReport = {
+        reportGeneratedDate: new Date().toISOString().split('T')[0],
+        totalCount: employees.length,
+        statusBreakdown: {
+          'On Mission': employees.filter(e => e.empstatus === 'On Mission').length,
+          'On Leave': employees.filter(e => e.empstatus === 'On Leave').length,
+          'Left': employees.filter(e => e.empstatus === 'Left').length,
+          'Blacklisted': employees.filter(e => e.empstatus === 'Blacklisted').length,
+          'Deceased': employees.filter(e => e.empstatus === 'Deceased').length,
+        },
+        records: employees
+      };
+      setActiveReport(summaryReport);
+      return;
+    }
+
     try {
       setFetchingReport(true);
       setReportError('');
@@ -362,6 +379,7 @@ export default function Dashboard() {
                   className="w-full md:w-64 bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 focus:border-[#1e3a8a] dark:focus:border-brand-500 focus:ring-1 focus:ring-[#1e3a8a] rounded-xl px-4 py-2.5 text-xs text-gray-900 dark:text-white font-semibold outline-none transition-all duration-300 appearance-none cursor-pointer"
                 >
                   <option value="">-- Choose Employee --</option>
+                  <option value="all">-- All Employees Summary --</option>
                   {employees.map((emp) => (
                     <option key={emp.emp_id} value={emp.emp_id}>
                       {emp.empfname} {emp.emplname} (DAB-EMP-00{emp.emp_id})
@@ -394,154 +412,253 @@ export default function Dashboard() {
                     <Printer className="h-4 w-4" />
                     <span>Print Formal Report</span>
                   </button>
-                </div>
-
-                {/* Printable Report Wrapper */}
+                          {/* Printable Report Wrapper */}
                 <div 
                   id="printable-employee-report" 
                   className="p-8 rounded-2xl border border-gray-150 dark:border-slate-800 bg-gray-50 dark:bg-slate-950/40 text-black dark:text-slate-100"
                 >
-                  
-                  {/* Header */}
-                  <div className="flex justify-between items-start border-b border-gray-300 dark:border-slate-850 pb-6 mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-[#1e3a8a] text-white p-3 rounded-2xl flex items-center justify-center shadow-md">
-                        <Construction className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">DAB ENTERPRISE LTD</h4>
-                        <p className="text-[10px] text-gray-500 dark:text-slate-500 font-extrabold uppercase tracking-wider">Kigali Headquarters • Rwanda</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <h5 className="text-xs font-black uppercase text-[#1e3a8a] dark:text-brand-400 tracking-wider">Official Personnel Report</h5>
-                      <p className="text-[10px] text-gray-500 dark:text-slate-500 mt-1 font-medium">Generated: {activeReport.reportGeneratedDate}</p>
-                      <p className="text-[9px] text-gray-400 dark:text-slate-600 font-semibold mt-0.5">Reference ID: DAB-REP-00{activeReport.employeeInfo.id}</p>
-                    </div>
-                  </div>
-
-                  {/* Employee Title Banner */}
-                  <div className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl mb-6 shadow-sm">
-                    <div className="h-16 w-16 rounded-2xl bg-[#1e3a8a] dark:bg-brand-600 flex items-center justify-center font-black text-white text-2xl shadow-inner shrink-0 uppercase">
-                      {activeReport.employeeInfo.firstName[0]}{activeReport.employeeInfo.lastName[0]}
-                    </div>
-                    <div className="text-center sm:text-left flex-1">
-                      <h4 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
-                        {activeReport.employeeInfo.fullName}
-                      </h4>
-                      <p className="text-xs text-[#1e3a8a] dark:text-brand-400 font-bold mt-1 uppercase tracking-wider">
-                        {activeReport.jobInfo.position} • {activeReport.jobInfo.department}
-                      </p>
-                    </div>
-                    <div className="shrink-0">
-                      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black border ${
-                        STATUS_BADGES[activeReport.jobInfo.status] || 'bg-white border-[#1e3a8a] text-[#1e3a8a]'
-                      }`}>
-                        {activeReport.jobInfo.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Information Sections Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
-                    {/* Personnel Info */}
-                    <div className="space-y-4 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-                      <h5 className="text-xs font-black text-[#1e3a8a] dark:text-brand-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-850 pb-2 mb-4">
-                        Personnel Information
-                      </h5>
-
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">First Name</p>
-                          <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.firstName}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Last Name</p>
-                          <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.lastName}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Gender</p>
-                          <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.gender}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Date of Birth</p>
-                          <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.dateOfBirth}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Contact Phone</p>
-                          <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.telephone}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Email Address</p>
-                          <p className="font-semibold text-gray-950 dark:text-white mt-0.5">{activeReport.employeeInfo.email}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Residential Address</p>
-                          <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.address}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Employment Info */}
-                    <div className="space-y-4 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                      <div>
-                        <h5 className="text-xs font-black text-[#1e3a8a] dark:text-brand-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-850 pb-2 mb-4">
-                          Employment Details
-                        </h5>
-
-                        <div className="grid grid-cols-2 gap-4 text-xs">
-                          <div>
-                            <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Department</p>
-                            <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.department}</p>
+                  {selectedEmpId === 'all' ? (
+                    // ==========================================
+                    // ALL EMPLOYEES DIRECTORY SUMMARY REPORT
+                    // ==========================================
+                    <div className="space-y-6">
+                      {/* Header */}
+                      <div className="flex justify-between items-start border-b border-gray-300 dark:border-slate-850 pb-6 mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#1e3a8a] text-white p-3 rounded-2xl flex items-center justify-center shadow-md">
+                            <Construction className="h-6 w-6" />
                           </div>
                           <div>
-                            <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Date of Hire</p>
-                            <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.hireDate}</p>
+                            <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">DAB ENTERPRISE LTD</h4>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-500 font-extrabold uppercase tracking-wider">Kigali Headquarters • Rwanda</p>
                           </div>
-                          <div className="col-span-2">
-                            <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Assigned Position</p>
-                            <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.position}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Required Qualification</p>
-                            <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.requiredQualification}</p>
-                          </div>
+                        </div>
+                        <div className="text-right">
+                          <h5 className="text-xs font-black uppercase text-[#1e3a8a] dark:text-brand-400 tracking-wider">All-Personnel Summary Report</h5>
+                          <p className="text-[10px] text-gray-500 dark:text-slate-500 mt-1 font-medium">Generated: {activeReport.reportGeneratedDate}</p>
+                          <p className="text-[9px] text-gray-400 dark:text-slate-600 font-semibold mt-0.5">Total Records: {activeReport.totalCount} employees</p>
                         </div>
                       </div>
 
-                      {/* Account Link Indicator */}
-                      <div className="pt-4 border-t border-gray-100 dark:border-slate-850 mt-4">
-                        <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-950 p-3.5 rounded-xl border border-gray-250 dark:border-slate-800">
+                      {/* Statistics Summary widgets in print block */}
+                      <div className="grid grid-cols-5 gap-4 p-5 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl mb-6 shadow-sm">
+                        <div className="text-center border-r border-gray-150 dark:border-slate-800 last:border-0 pr-2">
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">On Mission</p>
+                          <h6 className="text-lg font-black text-gray-900 dark:text-white mt-1">{activeReport.statusBreakdown['On Mission']}</h6>
+                        </div>
+                        <div className="text-center border-r border-gray-150 dark:border-slate-800 last:border-0 pr-2">
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">On Leave</p>
+                          <h6 className="text-lg font-black text-gray-900 dark:text-white mt-1">{activeReport.statusBreakdown['On Leave']}</h6>
+                        </div>
+                        <div className="text-center border-r border-gray-150 dark:border-slate-800 last:border-0 pr-2">
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Left</p>
+                          <h6 className="text-lg font-black text-gray-900 dark:text-white mt-1">{activeReport.statusBreakdown['Left']}</h6>
+                        </div>
+                        <div className="text-center border-r border-gray-150 dark:border-slate-800 last:border-0 pr-2">
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Blacklisted</p>
+                          <h6 className="text-lg font-black text-gray-900 dark:text-white mt-1">{activeReport.statusBreakdown['Blacklisted']}</h6>
+                        </div>
+                        <div className="text-center last:border-0 pr-2">
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Deceased</p>
+                          <h6 className="text-lg font-black text-gray-900 dark:text-white mt-1">{activeReport.statusBreakdown['Deceased']}</h6>
+                        </div>
+                      </div>
+
+                      {/* Directory Table */}
+                      <div className="w-full overflow-x-auto rounded-2xl border border-gray-250 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                        <table className="min-w-full divide-y divide-gray-250 dark:divide-slate-800">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-slate-950 text-gray-700 dark:text-slate-300">
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">ID</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Employee Name</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Gender</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Department</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Position</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Hire Date</th>
+                              <th scope="col" className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-xs">
+                            {activeReport.records.map((emp) => (
+                              <tr key={emp.emp_id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/40">
+                                <td className="px-4 py-3.5 font-bold text-gray-550 dark:text-slate-500">DAB-EMP-00{emp.emp_id}</td>
+                                <td className="px-4 py-3.5 font-extrabold text-gray-900 dark:text-white">{emp.empfname} {emp.emplname}</td>
+                                <td className="px-4 py-3.5 text-gray-650 dark:text-slate-400">{emp.empgender}</td>
+                                <td className="px-4 py-3.5 font-bold text-[#1e3a8a] dark:text-brand-400">{emp.d_name || 'N/A'}</td>
+                                <td className="px-4 py-3.5 text-gray-700 dark:text-slate-300">{emp.posname || 'N/A'}</td>
+                                <td className="px-4 py-3.5 text-gray-655 dark:text-slate-450">{emp.emphiredate}</td>
+                                <td className="px-4 py-3.5">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                                    STATUS_BADGES[emp.empstatus] || 'bg-white border-[#1e3a8a] text-[#1e3a8a]'
+                                  }`}>
+                                    {emp.empstatus}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Certification Footer */}
+                      <div className="mt-8 pt-6 border-t border-gray-300 dark:border-slate-855 flex justify-between items-end text-[9px] text-gray-500 dark:text-slate-500">
+                        <div>
+                          <p className="font-extrabold uppercase text-[#1e3a8a] dark:text-brand-400">DAB Enterprise HR Division</p>
+                          <p className="mt-1">Kigali Administrative HQ, Rwanda</p>
+                          <p className="text-gray-400 mt-0.5">Verified database record. Signature not required.</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">STATUS REPORT PAGE 1 OF 1</p>
+                          <p className="mt-1">DAB Enterprise LTD © 2026</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // ==========================================
+                    // SINGLE EMPLOYEE PERSONNEL REPORT
+                    // ==========================================
+                    <div className="space-y-6">
+                      {/* Header */}
+                      <div className="flex justify-between items-start border-b border-gray-300 dark:border-slate-850 pb-6 mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[#1e3a8a] text-white p-3 rounded-2xl flex items-center justify-center shadow-md">
+                            <Construction className="h-6 w-6" />
+                          </div>
                           <div>
-                            <p className="text-[9px] text-gray-405 dark:text-slate-500 font-bold uppercase tracking-wider">HRMS System Link</p>
-                            <p className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
-                              {activeReport.systemInfo.hasHRMSAccount ? `Linked: @${activeReport.systemInfo.username}` : 'No System Account'}
-                            </p>
+                            <h4 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">DAB ENTERPRISE LTD</h4>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-500 font-extrabold uppercase tracking-wider">Kigali Headquarters • Rwanda</p>
                           </div>
-                          <span className={`w-2.5 h-2.5 rounded-full ${
-                            activeReport.systemInfo.hasHRMSAccount ? 'bg-emerald-550 dark:bg-emerald-500 animate-pulse' : 'bg-gray-400'
-                          }`} />
+                        </div>
+                        <div className="text-right">
+                          <h5 className="text-xs font-black uppercase text-[#1e3a8a] dark:text-brand-400 tracking-wider">Official Personnel Report</h5>
+                          <p className="text-[10px] text-gray-500 dark:text-slate-500 mt-1 font-medium">Generated: {activeReport.reportGeneratedDate}</p>
+                          <p className="text-[9px] text-gray-400 dark:text-slate-600 font-semibold mt-0.5">Reference ID: DAB-REP-00{activeReport.employeeInfo.id}</p>
                         </div>
                       </div>
 
-                    </div>
-                  </div>
+                      {/* Employee Title Banner */}
+                      <div className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl mb-6 shadow-sm">
+                        <div className="h-16 w-16 rounded-2xl bg-[#1e3a8a] dark:bg-brand-600 flex items-center justify-center font-black text-white text-2xl shadow-inner shrink-0 uppercase">
+                          {activeReport.employeeInfo.firstName[0]}{activeReport.employeeInfo.lastName[0]}
+                        </div>
+                        <div className="text-center sm:text-left flex-1">
+                          <h4 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                            {activeReport.employeeInfo.fullName}
+                          </h4>
+                          <p className="text-xs text-[#1e3a8a] dark:text-brand-400 font-bold mt-1 uppercase tracking-wider">
+                            {activeReport.jobInfo.position} • {activeReport.jobInfo.department}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-black border ${
+                            STATUS_BADGES[activeReport.jobInfo.status] || 'bg-white border-[#1e3a8a] text-[#1e3a8a]'
+                          }`}>
+                            {activeReport.jobInfo.status}
+                          </span>
+                        </div>
+                      </div>
 
-                  {/* Certification Footer */}
-                  <div className="mt-8 pt-6 border-t border-gray-300 dark:border-slate-850 flex justify-between items-end text-[9px] text-gray-500 dark:text-slate-500">
-                    <div>
-                      <p className="font-extrabold uppercase text-[#1e3a8a] dark:text-brand-400">DAB Enterprise HR Division</p>
-                      <p className="mt-1">Kigali Administrative HQ, Rwanda</p>
-                      <p className="text-gray-400 mt-0.5">Verified database record. Signature not required.</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold">STATUS REPORT PAGE 1 OF 1</p>
-                      <p className="mt-1">DAB Enterprise LTD © 2026</p>
-                    </div>
-                  </div>
+                      {/* Information Sections Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Personnel Info */}
+                        <div className="space-y-4 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                          <h5 className="text-xs font-black text-[#1e3a8a] dark:text-brand-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-850 pb-2 mb-4">
+                            Personnel Information
+                          </h5>
 
-                </div>
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">First Name</p>
+                              <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.firstName}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Last Name</p>
+                              <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.lastName}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Gender</p>
+                              <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.gender}</p>
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Date of Birth</p>
+                              <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.dateOfBirth}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Contact Phone</p>
+                              <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.telephone}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Email Address</p>
+                              <p className="font-semibold text-gray-950 dark:text-white mt-0.5">{activeReport.employeeInfo.email}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Residential Address</p>
+                              <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.employeeInfo.address}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Employment Info */}
+                        <div className="space-y-4 bg-white dark:bg-slate-900 border border-gray-250 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <h5 className="text-xs font-black text-[#1e3a8a] dark:text-brand-400 uppercase tracking-widest border-b border-gray-100 dark:border-slate-850 pb-2 mb-4">
+                              Employment Details
+                            </h5>
+
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Department</p>
+                                <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.department}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Date of Hire</p>
+                                <p className="font-bold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.hireDate}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Assigned Position</p>
+                                <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.position}</p>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-[9px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Required Qualification</p>
+                                <p className="font-semibold text-gray-900 dark:text-white mt-0.5">{activeReport.jobInfo.requiredQualification}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Account Link Indicator */}
+                          <div className="pt-4 border-t border-gray-100 dark:border-slate-850 mt-4">
+                            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-950 p-3.5 rounded-xl border border-gray-250 dark:border-slate-800">
+                              <div>
+                                <p className="text-[9px] text-gray-455 dark:text-slate-500 font-bold uppercase tracking-wider">HRMS System Link</p>
+                                <p className="text-xs font-bold text-gray-900 dark:text-white mt-0.5">
+                                  {activeReport.systemInfo.hasHRMSAccount ? `Linked: @${activeReport.systemInfo.username}` : 'No System Account'}
+                                </p>
+                              </div>
+                              <span className={`w-2.5 h-2.5 rounded-full ${
+                                activeReport.systemInfo.hasHRMSAccount ? 'bg-emerald-550 dark:bg-emerald-500 animate-pulse' : 'bg-gray-400'
+                              }`} />
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+
+                      {/* Certification Footer */}
+                      <div className="mt-8 pt-6 border-t border-gray-300 dark:border-slate-855 flex justify-between items-end text-[9px] text-gray-500 dark:text-slate-500">
+                        <div>
+                          <p className="font-extrabold uppercase text-[#1e3a8a] dark:text-brand-400">DAB Enterprise HR Division</p>
+                          <p className="mt-1">Kigali Administrative HQ, Rwanda</p>
+                          <p className="text-gray-400 mt-0.5">Verified database record. Signature not required.</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">STATUS REPORT PAGE 1 OF 1</p>
+                          <p className="mt-1">DAB Enterprise LTD © 2026</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>             </div>
 
               </div>
             ) : (

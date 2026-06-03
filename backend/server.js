@@ -188,7 +188,7 @@ app.post('/api/employees', authMiddleware, async (req, res) => {
   const {
     empfname, emplname, empgender, empdob,
     empemail, emptelephone, empaddress, emphiredate,
-    empstatus, d_id, pos_id
+    empstatus, departmentName, positionName
   } = req.body;
 
   // Simple validation
@@ -203,6 +203,35 @@ app.post('/api/employees', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Employee email already exists.' });
     }
 
+    // Resolve or insert Department
+    let resolvedDId = null;
+    if (departmentName && departmentName.trim() !== '') {
+      const trimmedDept = departmentName.trim();
+      const [deptRows] = await db.query('SELECT d_id FROM department WHERE d_name = ?', [trimmedDept]);
+      if (deptRows.length > 0) {
+        resolvedDId = deptRows[0].d_id;
+      } else {
+        const [insertDept] = await db.query('INSERT INTO department (d_name) VALUES (?)', [trimmedDept]);
+        resolvedDId = insertDept.insertId;
+      }
+    }
+
+    // Resolve or insert Position
+    let resolvedPosId = null;
+    if (positionName && positionName.trim() !== '') {
+      const trimmedPos = positionName.trim();
+      const [posRows] = await db.query('SELECT pos_id FROM `position` WHERE posname = ?', [trimmedPos]);
+      if (posRows.length > 0) {
+        resolvedPosId = posRows[0].pos_id;
+      } else {
+        const [insertPos] = await db.query('INSERT INTO `position` (posname, required_qualification) VALUES (?, ?)', [
+          trimmedPos,
+          'Manually added position qualification requirement'
+        ]);
+        resolvedPosId = insertPos.insertId;
+      }
+    }
+
     const query = `
       INSERT INTO employee 
         (empfname, emplname, empgender, empdob, empemail, emptelephone, empaddress, emphiredate, empstatus, d_id, pos_id)
@@ -213,8 +242,8 @@ app.post('/api/employees', authMiddleware, async (req, res) => {
       empfname, emplname, empgender, empdob,
       empemail, emptelephone, empaddress, emphiredate,
       empstatus || 'On Mission', 
-      d_id ? parseInt(d_id) : null, 
-      pos_id ? parseInt(pos_id) : null
+      resolvedDId, 
+      resolvedPosId
     ]);
 
     return res.status(201).json({
@@ -233,7 +262,7 @@ app.put('/api/employees/:id', authMiddleware, async (req, res) => {
   const {
     empfname, emplname, empgender, empdob,
     empemail, emptelephone, empaddress, emphiredate,
-    empstatus, d_id, pos_id
+    empstatus, departmentName, positionName
   } = req.body;
 
   if (!empfname || !emplname || !empgender || !empdob || !empemail || !emptelephone || !empaddress || !emphiredate) {
@@ -245,6 +274,35 @@ app.put('/api/employees/:id', authMiddleware, async (req, res) => {
     const [existing] = await db.query('SELECT emp_id FROM employee WHERE empemail = ? AND emp_id != ?', [empemail, empId]);
     if (existing.length > 0) {
       return res.status(400).json({ error: 'Employee email is already in use by another record.' });
+    }
+
+    // Resolve or insert Department
+    let resolvedDId = null;
+    if (departmentName && departmentName.trim() !== '') {
+      const trimmedDept = departmentName.trim();
+      const [deptRows] = await db.query('SELECT d_id FROM department WHERE d_name = ?', [trimmedDept]);
+      if (deptRows.length > 0) {
+        resolvedDId = deptRows[0].d_id;
+      } else {
+        const [insertDept] = await db.query('INSERT INTO department (d_name) VALUES (?)', [trimmedDept]);
+        resolvedDId = insertDept.insertId;
+      }
+    }
+
+    // Resolve or insert Position
+    let resolvedPosId = null;
+    if (positionName && positionName.trim() !== '') {
+      const trimmedPos = positionName.trim();
+      const [posRows] = await db.query('SELECT pos_id FROM `position` WHERE posname = ?', [trimmedPos]);
+      if (posRows.length > 0) {
+        resolvedPosId = posRows[0].pos_id;
+      } else {
+        const [insertPos] = await db.query('INSERT INTO `position` (posname, required_qualification) VALUES (?, ?)', [
+          trimmedPos,
+          'Manually added position qualification requirement'
+        ]);
+        resolvedPosId = insertPos.insertId;
+      }
     }
 
     const query = `
@@ -260,8 +318,8 @@ app.put('/api/employees/:id', authMiddleware, async (req, res) => {
       empfname, emplname, empgender, empdob,
       empemail, emptelephone, empaddress, emphiredate,
       empstatus,
-      d_id ? parseInt(d_id) : null,
-      pos_id ? parseInt(pos_id) : null,
+      resolvedDId,
+      resolvedPosId,
       empId
     ]);
 
