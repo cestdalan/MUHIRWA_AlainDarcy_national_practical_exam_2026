@@ -30,7 +30,7 @@ const STATUS_BADGES = {
 };
 
 export default function Dashboard() {
-  const { user: currentUser, checkSession } = useAuth();
+  const { user: currentUser, checkSession, refreshUser } = useAuth();
   const isAdmin = currentUser?.role === 'Admin';
 
   const [statusReport, setStatusReport] = useState({
@@ -244,33 +244,40 @@ export default function Dashboard() {
         intervalId = setInterval(() => {
           fetchPendingRequests();
         }, 4000);
-      } else if (currentUser.role === 'Staff' && !currentUser.emp_id) {
-        // Poll for status on unlinked Staff side
-        intervalId = setInterval(async () => {
-          const res = await fetch('/api/me');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.user && data.user.emp_id) {
-              // User has been approved and linked!
-              await checkSession();
-            } else {
-              // Otherwise, update request status in case they got rejected/cancelled
-              const reqRes = await fetch('/api/link-requests/my-pending');
-              if (reqRes.ok) {
-                const reqData = await reqRes.json();
-                setPendingRequest(reqData);
-                if (!reqData) {
-                  // If request was deleted or rejected, fetch unlinked list
-                  const empRes = await fetch('/api/employees/unlinked');
-                  if (empRes.ok) {
-                    const empData = await empRes.json();
-                    setUnlinkedEmployees(empData);
+      } else if (currentUser.role === 'Staff') {
+        if (!currentUser.emp_id) {
+          // Poll for status on unlinked Staff side
+          intervalId = setInterval(async () => {
+            const res = await fetch('/api/me');
+            if (res.ok) {
+              const data = await res.json();
+              if (data.user && data.user.emp_id) {
+                // User has been approved and linked!
+                await checkSession();
+              } else {
+                // Otherwise, update request status in case they got rejected/cancelled
+                const reqRes = await fetch('/api/link-requests/my-pending');
+                if (reqRes.ok) {
+                  const reqData = await reqRes.json();
+                  setPendingRequest(reqData);
+                  if (!reqData) {
+                    // If request was deleted or rejected, fetch unlinked list
+                    const empRes = await fetch('/api/employees/unlinked');
+                    if (empRes.ok) {
+                      const empData = await empRes.json();
+                      setUnlinkedEmployees(empData);
+                    }
                   }
                 }
               }
             }
-          }
-        }, 3000);
+          }, 3000);
+        } else {
+          // Poll for profile detail updates quietly on linked Staff side
+          intervalId = setInterval(async () => {
+            await refreshUser();
+          }, 4000);
+        }
       }
     }
 

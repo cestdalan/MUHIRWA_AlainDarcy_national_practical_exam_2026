@@ -65,8 +65,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Fetches updated user profile data quietly without triggering full page loading state
+  const refreshUser = async () => {
+    try {
+      const response = await fetch('/api/me');
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Quiet user refresh failed:', err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, checkSession }}>
+    <AuthContext.Provider value={{ user, loading, error, login, logout, checkSession, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
