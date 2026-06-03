@@ -317,6 +317,71 @@ app.get('/api/reports/status', authMiddleware, async (req, res) => {
   }
 });
 
+// Generate detailed employee report
+app.get('/api/reports/employee/:empId', authMiddleware, async (req, res) => {
+  if (req.session.user.role !== 'Admin') {
+    return res.status(403).json({ error: 'Access denied. Administrator privileges required.' });
+  }
+
+  const { empId } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        e.emp_id, e.empfname, e.emplname, e.empgender, 
+        DATE_FORMAT(e.empdob, "%Y-%m-%d") as empdob, 
+        e.empemail, e.emptelephone, e.empaddress, 
+        DATE_FORMAT(e.emphiredate, "%Y-%m-%d") as emphiredate, 
+        e.empstatus, e.d_id, e.pos_id,
+        d.d_name, p.posname, p.required_qualification,
+        u.username AS account_username
+      FROM employee e
+      LEFT JOIN department d ON e.d_id = d.d_id
+      LEFT JOIN \`position\` p ON e.pos_id = p.pos_id
+      LEFT JOIN users u ON e.emp_id = u.emp_id
+      WHERE e.emp_id = ?
+    `;
+
+    const [rows] = await db.query(query, [empId]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Employee not found.' });
+    }
+
+    const employee = rows[0];
+    const reportData = {
+      reportGeneratedDate: new Date().toISOString().split('T')[0],
+      employeeInfo: {
+        id: employee.emp_id,
+        fullName: `${employee.empfname} ${employee.emplname}`,
+        firstName: employee.empfname,
+        lastName: employee.emplname,
+        email: employee.empemail,
+        telephone: employee.emptelephone,
+        address: employee.empaddress,
+        gender: employee.empgender,
+        dateOfBirth: employee.empdob
+      },
+      jobInfo: {
+        hireDate: employee.emphiredate,
+        status: employee.empstatus,
+        department: employee.d_name || 'Unassigned',
+        position: employee.posname || 'Unassigned Position',
+        requiredQualification: employee.required_qualification || 'N/A'
+      },
+      systemInfo: {
+        hasHRMSAccount: !!employee.account_username,
+        username: employee.account_username || 'Not linked'
+      }
+    };
+
+    return res.status(200).json(reportData);
+  } catch (error) {
+    console.error('Employee report error:', error);
+    return res.status(500).json({ error: 'Failed to generate employee report.' });
+  }
+});
+
 // Lookup endpoint for departments (to populate dropdowns dynamically)
 app.get('/api/departments', authMiddleware, async (req, res) => {
   try {

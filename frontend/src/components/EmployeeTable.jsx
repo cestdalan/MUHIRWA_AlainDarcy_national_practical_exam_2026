@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Pencil, Trash2, ShieldAlert, Link as LinkIcon, Unlink as UnlinkIcon } from 'lucide-react';
+import { Pencil, Trash2, ShieldAlert, Link as LinkIcon, Unlink as UnlinkIcon, FileText } from 'lucide-react';
 
 const STATUS_BADGES = {
   'On Mission': 'bg-white border-[#1e3a8a] text-[#1e3a8a] dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/25',
@@ -10,7 +10,7 @@ const STATUS_BADGES = {
   'Deceased': 'bg-[#f5f5f5] border-[#1e3a8a] text-[#1e3a8a] dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/25'
 };
 
-export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick, onUnlinkClick }) {
+export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick, onUnlinkClick, onReport }) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'Admin';
 
@@ -148,6 +148,15 @@ export default function EmployeeTable({ employees, onEdit, onDelete, onLinkClick
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+                      {onReport && (
+                        <button
+                          onClick={() => onReport(emp)}
+                          className="p-2 rounded-lg bg-white border border-[#1e3a8a] text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400 hover:dark:bg-blue-600 hover:dark:text-white transition-all duration-300"
+                          title="Generate Employee Report"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onDelete(emp.emp_id)}
                         className="p-2 rounded-lg bg-black border border-black text-white hover:bg-white hover:text-black dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400 hover:dark:bg-rose-600 hover:dark:text-white transition-all duration-300"

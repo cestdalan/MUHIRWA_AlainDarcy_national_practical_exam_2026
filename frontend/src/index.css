@@ -162,3 +162,36 @@
     inset 0 2px 3px rgba(255, 255, 255, 0.08), 
     inset 0 -2px 3px rgba(0, 0, 0, 0.3);
 }
+
+/* Print CSS to isolate employee report card */
+@media print {
+  .no-print, .w-64, button, select, header, footer {
+    display: none !important;
+  }
+  body, html, #root, main {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: white !important;
+    color: black !important;
+  }
+  main {
+    margin-left: 0 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-employee-report, #printable-employee-report * {
+    visibility: visible;
+  }
+  #printable-employee-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

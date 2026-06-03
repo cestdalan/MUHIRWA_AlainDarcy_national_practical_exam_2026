@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -41,6 +41,19 @@ export default function Login() {
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
+
+  // Generate bubble parameters once on component mount
+  const bubbles = useMemo(() => {
+    return Array.from({ length: 22 }, (_, i) => ({
+      key: i,
+      size: Math.random() * 45 + 15,
+      left: Math.random() * 100,
+      delay: Math.random() * 10,
+      duration: Math.random() * 12 + 8,
+      opacity: Math.random() * 0.4 + 0.15,
+      blurVal: Math.random() * 1.5,
+    }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,29 +111,21 @@ export default function Login() {
     <div className="relative min-h-screen w-full flex items-center justify-center bg-[#f5f5f5] dark:bg-slate-950 p-4 text-black dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden">
       {/* Falling water glass bubbles background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {[...Array(22)].map((_, i) => {
-          const size = Math.random() * 45 + 15;
-          const left = Math.random() * 100;
-          const delay = Math.random() * 10;
-          const duration = Math.random() * 12 + 8;
-          const opacity = Math.random() * 0.4 + 0.15;
-          const blurVal = Math.random() * 1.5;
-          return (
-            <div
-              key={i}
-              className="bubble"
-              style={{
-                width: `${size}px`,
-                height: `${size}px`,
-                left: `${left}%`,
-                animationDelay: `${delay}s`,
-                animationDuration: `${duration}s`,
-                opacity: opacity,
-                filter: `blur(${blurVal}px)`
-              }}
-            />
-          );
-        })}
+        {bubbles.map(b => (
+          <div
+            key={b.key}
+            className="bubble"
+            style={{
+              width: `${b.size}px`,
+              height: `${b.size}px`,
+              left: `${b.left}%`,
+              animationDelay: `${b.delay}s`,
+              animationDuration: `${b.duration}s`,
+              opacity: b.opacity,
+              filter: `blur(${b.blurVal}px)`
+            }}
+          />
+        ))}
       </div>
 
       <div className="w-full max-w-md bg-white/70 dark:bg-slate-900/60 backdrop-blur-lg border border-gray-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl flex flex-col justify-between transition-colors duration-300 relative z-10">
